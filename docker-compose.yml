@@ -61,7 +61,7 @@ services:
       - interviewed-network
     environment:
       - OLLAMA_HOST=0.0.0.0
-    entrypoint: /bin/sh -c "ollama pull qwen2.5-coder && exec /bin/ollama serve"
+    entrypoint: ["/bin/sh", "-c", "if ! ollama list | grep -q qwen2.5-coder; then echo 'Downloading model...' && ollama pull qwen2.5-coder; fi && exec ollama serve"]
 
 networks:
   interviewed-network:
