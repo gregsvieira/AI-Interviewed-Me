@@ -3,32 +3,32 @@
 ## Audio Streaming Refactor
 
 ### Remove SpeechRecognition API
-- [ ] Remove SpeechRecognition API usage
-- [ ] Remove webkitSpeechRecognition fallback
-- [ ] Remove recognition event handlers (onresult, onerror, onend)
+- [x] Remove SpeechRecognition API usage
+- [x] Remove webkitSpeechRecognition fallback
+- [x] Remove recognition event handlers (onresult, onerror, onend)
 
 ### Implement Audio Capture with getUserMedia
-- [ ] Implement getUserMedia for audio capture
-- [ ] Store and manage MediaStream lifecycle
-- [ ] Stop tracks on cleanup
+- [x] Implement getUserMedia for audio capture
+- [x] Store and manage MediaStream lifecycle
+- [x] Stop tracks on cleanup
 
 ### Implement MediaRecorder
-- [ ] Implement MediaRecorder
-- [ ] Configure ondataavailable handler
-- [ ] Stream audio chunks via WebSocket
-- [ ] Set chunk interval (e.g., 250ms)
-- [ ] Ensure WebSocket connection before streaming
-- [ ] Emit audio:chunk events
+- [x] Implement MediaRecorder
+- [x] Configure ondataavailable handler
+- [x] Stream audio chunks via WebSocket
+- [x] Set chunk interval (e.g., 250ms)
+- [x] Ensure WebSocket connection before streaming
+- [x] Emit audio:chunk events
 
 ### Backend Audio Processing
-- [ ] Receive audio chunks on backend
-- [ ] Convert Blob to Buffer
-- [ ] Normalize audio format (PCM 16-bit, 16kHz, mono)
-- [ ] Integrate STT engine (e.g., Whisper)
+- [x] Receive audio chunks on backend
+- [x] Convert Blob to Buffer
+- [x] Normalize audio format (PCM 16-bit, 16kHz, mono)
+- [x] Integrate STT engine (e.g., Whisper)
 
 ### Cross-Browser Audio Handling
-- [ ] Detect and handle MIME types (webm, mp4)
-- [ ] Normalize audio formats across browsers
+- [x] Detect and handle MIME types (webm, mp4)
+- [x] Normalize audio formats across browsers
 
 ### (Think about it) AudioWorklet Implementation
 - [ ] Replace MediaRecorder with AudioWorklet
@@ -36,17 +36,17 @@
 - [ ] Stream Float32Array
 
 ### Security & Permissions
-- [ ] Enforce HTTPS or localhost
-- [ ] Handle permission errors (NotAllowedError)
-- [ ] Ensure user interaction before mic access
+- [x] Enforce HTTPS or localhost
+- [x] Handle permission errors (NotAllowedError)
+- [x] Ensure user interaction before mic access
 - [ ] Handle Safari/iOS restrictions
 
 ### Cleanup & Memory Management
-- [ ] Stop MediaRecorder on unmount
-- [ ] Close MediaStream tracks
-- [ ] Disconnect WebSocket
+- [x] Stop MediaRecorder on unmount
+- [x] Close MediaStream tracks
+- [x] Disconnect WebSocket
 - [ ] Prevent memory leaks
 
 ### Monitoring & Debugging
-- [ ] Add logging for audio lifecycle events
+- [x] Add logging for audio lifecycle events
 - [ ] Measure end-to-end latency

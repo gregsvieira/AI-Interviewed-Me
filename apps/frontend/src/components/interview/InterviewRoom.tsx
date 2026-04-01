@@ -70,6 +70,17 @@ export function InterviewRoom() {
       setAiSpeaking(speaking)
     })
 
+    newSocket.on('stt:result', (data: { text: string }) => {
+      console.log('[InterviewRoom] Server STT result:', data.text)
+      const text = data.text?.trim()
+      if (text) {
+        accumulatedTextRef.current = text
+        setUserSpeakingText(text)
+        addMessage({ role: 'user', text })
+        newSocket.emit('user:text', { text })
+      }
+    })
+
     newSocket.on('interview:ended', () => {
       endInterview()
       navigate('/history')
@@ -87,6 +98,19 @@ export function InterviewRoom() {
       ttsService.stop()
     }
   }, [token, selectedTopic, selectedSubtopic])
+
+  useEffect(() => {
+    return () => {
+      sttService.stop()
+      ttsService.stop()
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+      }
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     sttService.onResult((text) => {
@@ -184,12 +208,38 @@ export function InterviewRoom() {
     setIsRecording(true)
     setManualText('')
 
+    if (!sttService.isSupported()) {
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      
+      let errorMsg = 'Voice recognition not available. Please use manual input below.'
+      if (isSafari) {
+        errorMsg = 'Safari requires microphone permission. Please allow microphone access and try again.'
+      } else if (isIOS) {
+        errorMsg = 'Voice input not supported on this iOS device. Please use manual input below.'
+      }
+      
+      console.error('[InterviewRoom] STT not supported:', { isSafari, isIOS })
+      setSttError(errorMsg)
+      setUserSpeaking(false)
+      setIsRecording(false)
+      return
+    }
+
     try {
       await sttService.start()
-      console.log('[InterviewRoom] Audio streaming started');
-    } catch (err) {
+      console.log('[InterviewRoom] Audio streaming started')
+    } catch (err: any) {
       console.error('[InterviewRoom] Audio streaming start error:', err)
-      setSttError('Voice recognition not available. Please use manual input below.')
+      
+      let errorMsg = 'Voice recognition not available. Please use manual input below.'
+      if (err?.message?.includes('timeout')) {
+        errorMsg = 'Connection timeout. Please check your network and try again.'
+      } else if (err?.message?.includes('Permission denied')) {
+        errorMsg = 'Microphone permission denied. Please allow microphone access in your browser settings.'
+      }
+      
+      setSttError(errorMsg)
       setUserSpeaking(false)
       setIsRecording(false)
     }
@@ -215,9 +265,17 @@ export function InterviewRoom() {
     setUserSpeaking(false)
 
     const finalText = accumulatedTextRef.current.trim()
-    console.log('[InterviewRoom] Final text:', finalText);
+    console.log('[InterviewRoom] Final text from local STT:', finalText);
     accumulatedTextRef.current = ''
     setUserSpeakingText('')
+
+    if (finalText) {
+      addMessage({ role: 'user', text: finalText })
+      socket?.emit('user:text', { text: finalText })
+    } else {
+      console.log('[InterviewRoom] No text from local STT, requesting server transcription')
+      socket?.emit('audio:transcribe', {})
+    }
     setIsRecording(false)
 
     if (finalText) {
