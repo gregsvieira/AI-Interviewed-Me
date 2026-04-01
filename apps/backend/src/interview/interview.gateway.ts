@@ -168,13 +168,26 @@ export class InterviewGateway implements OnGatewayConnection, OnGatewayDisconnec
   @SubscribeMessage('audio:chunk')
   async handleAudioChunk(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { audio: Buffer },
+    @MessageBody() data: { audio: any },
   ) {
-    console.log('Received audio chunk:', data.audio?.length, 'bytes');
+    let audioBuffer: Buffer;
+    
+    if (data.audio instanceof ArrayBuffer) {
+      audioBuffer = Buffer.from(data.audio);
+    } else if (data.audio instanceof Buffer) {
+      audioBuffer = data.audio;
+    } else if (typeof data.audio === 'object' && data.audio.data) {
+      audioBuffer = Buffer.from(data.audio.data);
+    } else {
+      console.error('[Audio] Unknown audio data format:', typeof data.audio);
+      return { error: 'Unknown audio format' };
+    }
+
+    console.log('[Audio] Received audio chunk:', audioBuffer.length, 'bytes');
     
     const interview = [...this.activeInterviews.entries()].find(([, i]) => i.socketId === client.id);
     if (!interview) {
-      console.log('No active interview found for audio chunk');
+      console.log('[Audio] No active interview found for audio chunk');
       return { error: 'No active interview' };
     }
 
@@ -190,9 +203,7 @@ export class InterviewGateway implements OnGatewayConnection, OnGatewayDisconnec
       this.activeInterviews.set(interviewId, interviewData);
     }
 
-    if (data.audio) {
-      interviewData.audioChunks.push(data.audio);
-    }
+    interviewData.audioChunks.push(audioBuffer);
 
     return { received: true, chunks: interviewData.audioChunks.length };
   }
