@@ -68,17 +68,8 @@ export function InterviewRoom() {
     })
 
     newSocket.on('interview:started', (data: { interviewId: string; candidateName: string; interviewerName: string; interviewerGender: string }) => {
-      console.log('[InterviewRoom] Got interview:started event:', data);
-      console.log('[InterviewRoom] interviewId state BEFORE setInterviewId:', interviewId);
       setInterviewId(data.interviewId);
-      console.log('[InterviewRoom] interviewId should now be:', data.interviewId);
     })
-
-    newSocket.onAny((event, ...args) => {
-      console.log('[Socket] Event received:', event, args);
-    })
-
-    console.log('[InterviewRoom] All socket event listeners registered');
 
     newSocket.on('connect_error', (err) => {
       console.error('Socket connection error:', err)
@@ -95,7 +86,6 @@ export function InterviewRoom() {
     })
 
     newSocket.on('stt:result', (data: { text: string }) => {
-      console.log('[InterviewRoom] Server STT result:', data.text)
       const text = data.text?.trim()
       if (text) {
         accumulatedTextRef.current = text
@@ -279,7 +269,6 @@ export function InterviewRoom() {
           
           try {
             const arrayBuffer = await chunk.arrayBuffer()
-            console.log('[InterviewRoom] Sending audio:chunk with interviewId:', interviewId)
             socketRef.current?.emit('audio:chunk', { interviewId, audio: arrayBuffer })
           } catch (err) {
             console.error('[InterviewRoom] Error converting chunk:', err)

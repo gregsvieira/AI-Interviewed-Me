@@ -72,3 +72,22 @@
 - **Status**: ✅ FIXED
 - **Fix**: Refactored to use MediaRecorderService separately from WebSocket, socket stays open for transcription result
 
+### Bug 4: Logs de debug ainda presentes no frontend
+- **Description**: Logs de debug adicionados durante investigação ainda estão no código
+- **Priority**: Medium
+- **Status**: ✅ FIXED
+- **Fix**: Removidos logs como `[Socket] Event received`, logs detalhados de `interview:started`, e logs verbosos de chunks
+
+### Bug 5: Whisper não está funcionando (404 no /api/audio)
+- **Description**: Modelo whisper-small não foi baixado corretamente, resultando em erro 404 ao chamar /api/audio
+- **Priority**: High
+- **Status**: 🐛 A corrigir
+- **Causa**: Volume ollama-data pode ter sido perdido ou modelo não foi puxado pelo entrypoint.sh
+- **Fix**: Verificar se volume está preservado e testar download manual do modelo
+
+### Bug 6: Nginx com muitos worker processes (42)
+- **Description**: Nginx cria workers baseado nos CPU cores do host, resultando em 42 processos
+- **Priority**: Low
+- **Status**: 📝 Para otimizar depois
+- **Fix**: Modificar nginx.conf para usar `worker_processes 1;`
+
