@@ -6,6 +6,7 @@ export interface STTService {
   onResult(callback: (text: string) => void): void
   onInterimResult(callback: (text: string) => void): void
   onSpeakingChange(callback: (speaking: boolean) => void): void
+  onChunk(callback: (chunks: Blob[]) => void): void
   isSupported(): boolean
 }
 

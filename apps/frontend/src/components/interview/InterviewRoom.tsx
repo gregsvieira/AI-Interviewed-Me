@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { WS_URL } from '@/lib/utils'
-import { WebSpeechSTT } from '@/services/audio/webSpeech.stt'
+import { WebSocketSTT } from '@/services/audio/websocket.stt'
 import { WebSpeechTTS } from '@/services/audio/webSpeech.tts'
 import { useAuthStore } from '@/stores/auth.store'
 import { useInterviewStore } from '@/stores/interview.store'
@@ -17,7 +17,7 @@ export function InterviewRoom() {
   const { token, user } = useAuthStore()
 
   const [socket, setSocket] = useState<Socket | null>(null)
-  const [sttService] = useState(() => new WebSpeechSTT())
+  const [sttService] = useState(() => new WebSocketSTT())
   const [ttsService] = useState(() => new WebSpeechTTS())
   const [typingMessage, setTypingMessage] = useState<{ role: 'ai' | 'user'; text: string } | null>(null)
   const [userSpeakingText, setUserSpeakingText] = useState('')
@@ -89,17 +89,10 @@ export function InterviewRoom() {
   }, [token, selectedTopic, selectedSubtopic])
 
   useEffect(() => {
-    sttService.onInterimResult((text) => {
-      console.log('[InterviewRoom] Interim result:', text);
-      setUserSpeakingText(accumulatedTextRef.current ? accumulatedTextRef.current + ' ' + text : text)
-    })
-
     sttService.onResult((text) => {
-      console.log('[InterviewRoom] Final result:', text);
-      accumulatedTextRef.current = accumulatedTextRef.current 
-        ? accumulatedTextRef.current + ' ' + text 
-        : text
-      setUserSpeakingText(accumulatedTextRef.current.trim())
+      console.log('[InterviewRoom] STT result:', text);
+      accumulatedTextRef.current = text
+      setUserSpeakingText(text.trim())
     })
 
     sttService.onSpeakingChange((speaking) => {
@@ -192,22 +185,10 @@ export function InterviewRoom() {
     setManualText('')
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      console.log('[InterviewRoom] Microphone permission granted');
-    } catch (err) {
-      console.error('[InterviewRoom] Microphone permission denied:', err);
-      setSttError('Microphone permission denied. Please allow microphone access and try again.')
-      setUserSpeaking(false)
-      setIsRecording(false)
-      return
-    }
-
-    try {
       await sttService.start()
-      console.log('[InterviewRoom] STT started');
+      console.log('[InterviewRoom] Audio streaming started');
     } catch (err) {
-      console.error('[InterviewRoom] STT start error:', err)
+      console.error('[InterviewRoom] Audio streaming start error:', err)
       setSttError('Voice recognition not available. Please use manual input below.')
       setUserSpeaking(false)
       setIsRecording(false)

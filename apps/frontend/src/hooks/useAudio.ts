@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { WebSpeechSTT } from '@/services/audio/webSpeech.stt'
+import { WebSocketSTT } from '@/services/audio/websocket.stt'
 import { WebSpeechTTS } from '@/services/audio/webSpeech.tts'
-import type { STTService, TTSService } from '@/types/audio'
+import type { TTSService } from '@/types/audio'
 
 interface UseAudioReturn {
   isSttSupported: boolean
@@ -15,7 +15,7 @@ interface UseAudioReturn {
 }
 
 export function useAudio(): UseAudioReturn {
-  const [sttService] = useState<STTService>(() => new WebSpeechSTT())
+  const [sttService] = useState(() => new WebSocketSTT())
   const [ttsService] = useState<TTSService>(() => new WebSpeechTTS())
   const [isUserSpeaking, setIsUserSpeaking] = useState(false)
   const [isAiSpeaking, setIsAiSpeaking] = useState(false)

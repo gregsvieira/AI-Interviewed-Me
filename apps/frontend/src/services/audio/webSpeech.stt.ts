@@ -132,6 +132,9 @@ export class WebSpeechSTT implements STTService {
     this.speakingCallback = callback;
   }
 
+  onChunk(_callback: (chunks: Blob[]) => void): void {
+  }
+
   isSupported(): boolean {
     return !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
   }

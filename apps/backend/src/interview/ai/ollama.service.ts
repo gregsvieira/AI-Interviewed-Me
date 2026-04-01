@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { config } from '../../config';
+import { createReadStream, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 export interface OllamaResponse {
   response: string;
@@ -43,6 +46,34 @@ export class OllamaService {
         throw new Error(`Ollama error: ${error.response.status} - ${error.response.statusText}`);
       }
       throw new Error('Failed to generate response from Ollama');
+    }
+  }
+
+  async transcribe(audioBuffer: Buffer): Promise<string> {
+    try {
+      const tempFilePath = join(tmpdir(), `audio_${Date.now()}.webm`);
+      writeFileSync(tempFilePath, audioBuffer);
+
+      const formData = new FormData();
+      const fileStream = createReadStream(tempFilePath);
+      const fileBuffer = require('fs').readFileSync(tempFilePath);
+      const blob = new Blob([fileBuffer], { type: 'audio/webm' });
+      formData.append('file', blob, 'audio.webm');
+      formData.append('model', 'whisper');
+
+      const response = await axios.post(`${this.baseUrl}/api/audio`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 60000,
+      });
+
+      require('fs').unlinkSync(tempFilePath);
+
+      return response.data?.text || '';
+    } catch (error) {
+      console.error('Ollama transcription error:', error);
+      return '';
     }
   }
 

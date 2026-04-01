@@ -1,11 +1,11 @@
 import { STTService } from '@/types/audio'
-import { WebSpeechSTT } from './webSpeech.stt'
+import { WebSocketSTT } from './websocket.stt'
 
 let instance: STTService | null = null
 
 export function getSTTService(): STTService {
   if (!instance) {
-    instance = new WebSpeechSTT()
+    instance = new WebSocketSTT()
   }
   return instance
 }

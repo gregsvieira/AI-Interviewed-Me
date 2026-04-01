@@ -30,6 +30,10 @@ export class AIService {
     return response;
   }
 
+  async transcribeAudio(audioBuffer: Buffer): Promise<string> {
+    return this.ollama.transcribe(audioBuffer);
+  }
+
   clearContext(interviewId: string): void {
     this.conversationContext.delete(interviewId);
   }

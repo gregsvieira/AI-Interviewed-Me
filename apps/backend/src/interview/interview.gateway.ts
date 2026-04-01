@@ -15,6 +15,7 @@ import { JwtService } from '@nestjs/jwt';
 interface ActiveInterview {
   socketId: string;
   userId: string;
+  audioChunks: any[];
 }
 
 @WebSocketGateway({
@@ -85,6 +86,7 @@ export class InterviewGateway implements OnGatewayConnection, OnGatewayDisconnec
     this.activeInterviews.set(interviewId, {
       socketId: client.id,
       userId: client.data.user.id,
+      audioChunks: [],
     });
 
     try {
@@ -146,11 +148,13 @@ export class InterviewGateway implements OnGatewayConnection, OnGatewayDisconnec
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { interviewId: string },
   ) {
-    const interview = this.activeInterviews.get(data.interviewId);
-    if (interview && interview.socketId === client.id) {
+    const interview = [...this.activeInterviews.entries()].find(([, i]) => i.socketId === client.id);
+    if (interview) {
+      const [interviewId] = interview;
+      const interviewData = this.activeInterviews.get(interviewId);
       try {
-        await this.interviewService.endInterview(data.interviewId);
-        this.activeInterviews.delete(data.interviewId);
+        await this.interviewService.endInterview(interviewId);
+        this.activeInterviews.delete(interviewId);
         client.emit('interview:ended');
         return { success: true };
       } catch (error) {
@@ -159,6 +163,80 @@ export class InterviewGateway implements OnGatewayConnection, OnGatewayDisconnec
       }
     }
     return { error: 'Interview not found or unauthorized' };
+  }
+
+  @SubscribeMessage('audio:chunk')
+  async handleAudioChunk(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { audio: Buffer },
+  ) {
+    console.log('Received audio chunk:', data.audio?.length, 'bytes');
+    
+    const interview = [...this.activeInterviews.entries()].find(([, i]) => i.socketId === client.id);
+    if (!interview) {
+      console.log('No active interview found for audio chunk');
+      return { error: 'No active interview' };
+    }
+
+    const [interviewId] = interview;
+    let interviewData = this.activeInterviews.get(interviewId);
+    
+    if (!interviewData) {
+      interviewData = {
+        socketId: client.id,
+        userId: client.data.user?.id || 'test-user',
+        audioChunks: [],
+      };
+      this.activeInterviews.set(interviewId, interviewData);
+    }
+
+    if (data.audio) {
+      interviewData.audioChunks.push(data.audio);
+    }
+
+    return { received: true, chunks: interviewData.audioChunks.length };
+  }
+
+  @SubscribeMessage('audio:transcribe')
+  async handleAudioTranscribe(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { interviewId?: string },
+  ) {
+    console.log('Transcribe request received');
+    
+    const interview = [...this.activeInterviews.entries()].find(
+      ([, i]) => i.socketId === client.id,
+    );
+    if (!interview) {
+      console.log('No active interview found for transcription');
+      return { error: 'No active interview' };
+    }
+
+    const [interviewId, interviewData] = interview;
+    
+    if (interviewData.audioChunks.length === 0) {
+      console.log('No audio chunks to transcribe');
+      return { text: '' };
+    }
+
+    try {
+      console.log('Processing', interviewData.audioChunks.length, 'audio chunks');
+      
+      const combinedAudio = Buffer.concat(interviewData.audioChunks);
+      console.log('Combined audio size:', combinedAudio.length, 'bytes');
+      
+      const text = await this.interviewService.transcribeAudio(combinedAudio);
+      
+      interviewData.audioChunks = [];
+      
+      console.log('Transcription result:', text?.substring(0, 100));
+      client.emit('stt:result', { text });
+
+      return { text };
+    } catch (error) {
+      console.error('Transcription error:', error);
+      return { error: 'Transcription failed' };
+    }
   }
 
   @SubscribeMessage('ping')

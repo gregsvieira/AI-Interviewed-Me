@@ -147,4 +147,20 @@ export class InterviewService {
   getActiveInterview(interviewId: string): Interview | undefined {
     return this.currentInterviews.get(interviewId);
   }
+
+  async transcribeAudio(audioBuffer: Buffer): Promise<string> {
+    console.log('[InterviewService] transcribeAudio called with', audioBuffer.length, 'bytes');
+    
+    if (audioBuffer.length === 0) {
+      return '';
+    }
+
+    try {
+      const transcription = await this.aiService.transcribeAudio(audioBuffer);
+      return transcription;
+    } catch (error) {
+      console.error('[InterviewService] Transcription error:', error);
+      return '';
+    }
+  }
 }
