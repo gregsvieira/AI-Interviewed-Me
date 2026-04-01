@@ -79,14 +79,15 @@
 - **Fix**: Removidos logs como `[Socket] Event received`, logs detalhados de `interview:started`, e logs verbosos de chunks
 
 ### Bug 5: Whisper não está funcionando (404 no /api/audio)
-- **Description**: Modelo whisper-small não foi baixado corretamente, resultando em erro 404 ao chamar /api/audio
+- **Description**: Ollama não tem endpoint nativo `/api/audio` para transcrição. O modelo `karanchopda333/whisper` não é um modelo real de Whisper.
 - **Priority**: High
 - **Status**: ✅ FIXED
-- **Causa**: Nome do modelo estava errado no Ollama. O modelo correto é `karanchopda333/whisper`
+- **Causa**: Ollama não suporta transcrição de áudio via API nativa. O modelo `karanchopda333/whisper` usa `/api/chat`, não `/api/audio`.
 - **Fix**: 
-  - Atualizado `ollama.service.ts` para usar `karanchopda333/whisper`
-  - Atualizado `entrypoint.sh` para baixar o modelo correto
-  - Baixado modelo manualmente: `docker exec interviewed-ollama ollama pull karanchopda333/whisper`
+  - Criado serviço Python `apps/stt-service/` usando `faster-whisper`
+  - Adicionado `STT_SERVICE_URL` na config do backend
+  - Backend agora chama o serviço faster-whisper em vez do Ollama
+  - Serviço disponível em `http://localhost:8001` com endpoint `/transcribe`
 
 ### Bug 6: Nginx com muitos worker processes (42)
 - **Description**: Nginx cria workers baseado nos CPU cores do host, resultando em 42 processos
