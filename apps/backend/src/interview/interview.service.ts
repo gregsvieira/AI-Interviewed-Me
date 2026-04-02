@@ -157,6 +157,12 @@ export class InterviewService {
     if (!interview) return;
 
     interview.endedAt = new Date();
+    
+    const startTime = new Date(interview.startedAt).getTime();
+    const endTime = new Date(interview.endedAt).getTime();
+    const actualDurationMinutes = Math.round((endTime - startTime) / 60000);
+    interview.duration = actualDurationMinutes > 0 ? actualDurationMinutes : interview.duration;
+    
     this.aiService.clearContext(interviewId);
 
     await this.storage.save('interviews', interviewId, interview);

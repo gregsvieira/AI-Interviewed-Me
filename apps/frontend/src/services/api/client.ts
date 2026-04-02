@@ -25,3 +25,12 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+apiClient.patch = function(url, data, config) {
+  return apiClient.request({
+    method: 'PATCH',
+    url,
+    data,
+    ...config,
+  })
+}
