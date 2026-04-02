@@ -5,7 +5,7 @@ import { useHeaderStore } from '@/stores/header.store'
 import { profileApi } from '@/services/api/profile.api'
 import { UserProfile } from '@/types/user'
 import { Topic } from '@/types/interview'
-import { Check, ArrowLeft, Save, Camera, User } from 'lucide-react'
+import { Check, ArrowLeft, Save, Camera, User, X, CheckCircle } from 'lucide-react'
 
 const TOPICS_DATA: Topic[] = [
   { id: 'softskills', name: 'Soft Skills', subtopics: [] },
@@ -15,6 +15,160 @@ const TOPICS_DATA: Topic[] = [
   { id: 'devops', name: 'DevOps', subtopics: [] },
   { id: 'database', name: 'Database', subtopics: [] },
 ]
+
+interface ImageCropperProps {
+  image: string
+  onCrop: (croppedImage: string) => void
+  onCancel: () => void
+}
+
+function ImageCropper({ image, onCrop, onCancel }: ImageCropperProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 })
+  const imageRef = useRef<HTMLImageElement | null>(null)
+
+  useEffect(() => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = canvasRef.current
+      if (canvas) {
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          const displaySize = 200
+          const minSize = Math.min(img.width, img.height)
+          canvas.width = displaySize
+          canvas.height = displaySize
+          ctx.clearRect(0, 0, displaySize, displaySize)
+          
+          const scale = displaySize / minSize
+          const scaledWidth = img.width * scale
+          const scaledHeight = img.height * scale
+          const offsetX = (displaySize - scaledWidth) / 2
+          const offsetY = (displaySize - scaledHeight) / 2
+          ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight)
+        }
+      }
+      
+      imageRef.current = img
+    }
+    img.src = image
+  }, [image])
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true)
+    setStartPos({ x: e.clientX - offset.x, y: e.clientY - offset.y })
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !imageRef.current) return
+
+    const newX = e.clientX - startPos.x
+    const newY = e.clientY - startPos.y
+
+    const container = containerRef.current
+    const img = imageRef.current
+    if (!container || !img) return
+
+    const displaySize = 200
+    const scale = displaySize / Math.min(img.width, img.height)
+    const scaledWidth = img.width * scale
+    const scaledHeight = img.height * scale
+
+    const maxOffsetX = Math.max(0, (scaledWidth - displaySize) / 2)
+    const maxOffsetY = Math.max(0, (scaledHeight - displaySize) / 2)
+
+    const clampedX = Math.min(maxOffsetX, Math.max(-maxOffsetX, newX))
+    const clampedY = Math.min(maxOffsetY, Math.max(-maxOffsetY, newY))
+
+    setOffset({ x: clampedX, y: clampedY })
+
+    const canvas = canvasRef.current
+    if (canvas) {
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.clearRect(0, 0, displaySize, displaySize)
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(displaySize / 2, displaySize / 2, displaySize / 2, 0, Math.PI * 2)
+        ctx.clip()
+        const offsetX = (displaySize - scaledWidth) / 2 + clampedX
+        const offsetY = (displaySize - scaledHeight) / 2 + clampedY
+        ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight)
+        ctx.restore()
+      }
+    }
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+  }
+
+  const handleConfirm = () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 200
+    canvas.height = 200
+    const ctx = canvas.getContext('2d')
+    if (ctx && imageRef.current) {
+      ctx.beginPath()
+      ctx.arc(100, 100, 100, 0, Math.PI * 2)
+      ctx.clip()
+      const img = imageRef.current
+      const scale = 200 / Math.min(img.width, img.height)
+      const scaledWidth = img.width * scale
+      const scaledHeight = img.height * scale
+      const offsetX = (200 - scaledWidth) / 2 + offset.x
+      const offsetY = (200 - scaledHeight) / 2 + offset.y
+      ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight)
+      const result = canvas.toDataURL('image/jpeg', 0.8)
+      onCrop(result)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+      <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 max-w-sm w-full mx-4">
+        <h3 className="text-lg font-medium text-zinc-100 mb-4 text-center">
+          Position your photo
+        </h3>
+        <p className="text-sm text-zinc-400 mb-4 text-center">
+          Drag to adjust the position
+        </p>
+        
+        <div
+          ref={containerRef}
+          className="w-48 h-48 mx-auto mb-6 rounded-full overflow-hidden border-4 border-zinc-600 cursor-move select-none"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
+          <canvas ref={canvasRef} className="w-full h-full" />
+        </div>
+
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            className="flex-1 bg-blue-600 hover:bg-blue-700"
+          >
+            <CheckCircle className="w-4 h-4 mr-2" />
+            Confirm
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function ProfilePage() {
   const setTitle = useHeaderStore((state) => state.setTitle)
@@ -27,6 +181,7 @@ export function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
+  const [tempImage, setTempImage] = useState<string | null>(null)
 
   useEffect(() => {
     setTitle('Settings')
@@ -57,12 +212,20 @@ export function ProfilePage() {
 
     const reader = new FileReader()
     reader.onloadend = () => {
-      const base64 = reader.result as string
-      setPreviewAvatar(base64)
-      setAvatar(base64)
-      setHasChanges(true)
+      setTempImage(reader.result as string)
     }
     reader.readAsDataURL(file)
+  }
+
+  const handleCropConfirm = (croppedImage: string) => {
+    setPreviewAvatar(croppedImage)
+    setAvatar(croppedImage)
+    setTempImage(null)
+    setHasChanges(true)
+  }
+
+  const handleCropCancel = () => {
+    setTempImage(null)
   }
 
   const toggleTopic = (topicId: string) => {
@@ -102,6 +265,14 @@ export function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
+      {tempImage && (
+        <ImageCropper
+          image={tempImage}
+          onCrop={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
+      )}
+
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="flex items-center gap-4 mb-8">
           <Button
