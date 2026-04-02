@@ -16,23 +16,20 @@ export function HistoryPage() {
   const [interviews, setInterviews] = useState<Interview[]>([])
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!selectedInterview || isDeleting) return
+    if (!selectedInterview) return
     
     if (!window.confirm('Are you sure you want to delete this interview?')) {
       return
     }
 
-    setIsDeleting(true)
     try {
       await interviewApi.deleteInterview(selectedInterview.id)
       navigate('/history')
     } catch (error) {
       console.error('Failed to delete interview:', error)
-      setIsDeleting(false)
     }
   }
 
@@ -97,11 +94,10 @@ export function HistoryPage() {
               variant="ghost"
               size="sm"
               onClick={handleDelete}
-              disabled={isDeleting}
               className="text-zinc-400 hover:text-red-400 hover:bg-zinc-800"
             >
               <Trash2 className="w-4 h-4 mr-2" />
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              Delete
             </Button>
           </div>
 

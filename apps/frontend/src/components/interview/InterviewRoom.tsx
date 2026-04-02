@@ -39,6 +39,7 @@ export function InterviewRoom() {
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const accumulatedTextRef = useRef('')
   const socketRef = useRef<Socket | null>(null)
+  const interviewIdRef = useRef<string | null>(null)
   const webSpeechFinalTextRef = useRef('')
   const webSpeechSentRef = useRef(false)
 
@@ -81,6 +82,7 @@ export function InterviewRoom() {
 
     newSocket.on('interview:started', (data: { interviewId: string; candidateName: string; interviewerName: string; interviewerGender: string }) => {
       setInterviewId(data.interviewId);
+      interviewIdRef.current = data.interviewId;
     })
 
     newSocket.on('connect_error', (err) => {
@@ -103,7 +105,9 @@ export function InterviewRoom() {
         accumulatedTextRef.current = text
         setUserSpeakingText(text)
         addMessage({ role: 'user', text })
-        newSocket.emit('user:text', { interviewId, text })
+        const currentInterviewId = interviewIdRef.current
+        console.log('[InterviewRoom] stt:result, sending user:text with interviewId:', currentInterviewId)
+        newSocket.emit('user:text', { interviewId: currentInterviewId, text })
       }
     })
 
@@ -324,7 +328,7 @@ export function InterviewRoom() {
     const text = manualText.trim()
     if (text) {
       addMessage({ role: 'user', text })
-      socket?.emit('user:text', { interviewId, text })
+      socket?.emit('user:text', { interviewId: interviewIdRef.current, text })
     }
     setManualText('')
     setSttError(null)
@@ -346,7 +350,7 @@ export function InterviewRoom() {
 
     if (!webSpeechSentRef.current) {
       console.log('[InterviewRoom] Requesting server transcription (web speech not used)')
-      socketRef.current?.emit('audio:transcribe', { interviewId })
+      socketRef.current?.emit('audio:transcribe', { interviewId: interviewIdRef.current })
     } else {
       console.log('[InterviewRoom] Skipping server transcription (web speech already sent)')
     }
@@ -354,7 +358,7 @@ export function InterviewRoom() {
   }
 
   const handleEndInterview = () => {
-    socket?.emit('end', { interviewId })
+    socket?.emit('end', { interviewId: interviewIdRef.current })
     ttsService.stop()
     setPreloadedMessage(null)
     endInterview()
