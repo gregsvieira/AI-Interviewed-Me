@@ -17,10 +17,45 @@ export interface Message {
 
 export interface Interview {
   id: string
-  topic: Topic
-  subtopic: Subtopic
+  topic: string
+  subtopic: string
+  level: string
   duration: number
   startedAt: Date
   endedAt?: Date
   messages: Message[]
+}
+
+export interface TopicDistribution {
+  id: string
+  name: string
+  count: number
+  percentage: number
+}
+
+export interface LevelDistribution {
+  level: string
+  count: number
+  percentage: number
+}
+
+export interface SkillLevel {
+  topicId: string
+  name: string
+  level: number
+}
+
+export interface InterviewStats {
+  totalInterviews: number
+  totalTimeMinutes: number
+  lastInterview: Interview | null
+  topicDistribution: TopicDistribution[]
+  levelDistribution: LevelDistribution[]
+  skillLevels: SkillLevel[]
+  currentStreak: number
+  longestStreak: number
+  recommendation: {
+    type: 'practice' | 'level' | 'motivation'
+    message: string
+  }
 }

@@ -74,10 +74,10 @@ export function HistoryPage() {
             {interviews.map((interview) => (
               <Card key={interview.id} className="bg-zinc-900 border-zinc-800">
                 <CardHeader>
-                  <CardTitle className="text-zinc-100 text-lg">
-                    {interview.topic.name}
+                  <CardTitle className="text-zinc-100 text-lg capitalize">
+                    {interview.topic}
                   </CardTitle>
-                  <p className="text-sm text-zinc-400">{interview.subtopic.name}</p>
+                  <p className="text-sm text-zinc-400 capitalize">{interview.subtopic}</p>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-4 text-sm text-zinc-400">

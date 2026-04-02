@@ -1,8 +1,10 @@
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ConfigPage } from '@/pages/ConfigPage'
 import { HistoryPage } from '@/pages/HistoryPage'
+import { HomePage } from '@/pages/HomePage'
 import { InterviewPage } from '@/pages/InterviewPage'
 import { LoginPage } from '@/pages/LoginPage'
+import { ProfilePage } from '@/pages/ProfilePage'
 import { useAuthStore } from '@/stores/auth.store'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
@@ -20,7 +22,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   
   if (isAuthenticated) {
-    return <Navigate to="/config" replace />
+    return <Navigate to="/home" replace />
   }
   
   return <>{children}</>
@@ -41,9 +43,9 @@ export default function App() {
         <Route
           path="/home"
           element={
-            <PublicRoute>
-              <ConfigPage />
-            </PublicRoute>
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
           }
         />
         <Route
@@ -67,6 +69,22 @@ export default function App() {
           element={
             <ProtectedRoute>
               <HistoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/history/:id"
+          element={
+            <ProtectedRoute>
+              <HistoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

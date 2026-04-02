@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import { Topic, Interview } from '@/types/interview'
+import { Topic, Interview, InterviewStats } from '@/types/interview'
 
 export const interviewApi = {
   async getTopics(): Promise<Topic[]> {
@@ -9,6 +9,11 @@ export const interviewApi = {
 
   async getHistory(): Promise<Interview[]> {
     const response = await apiClient.get<Interview[]>('/interview/history')
+    return response.data
+  },
+
+  async getStats(): Promise<InterviewStats> {
+    const response = await apiClient.get<InterviewStats>('/interview/stats')
     return response.data
   },
 
