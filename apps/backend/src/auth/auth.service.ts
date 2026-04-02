@@ -4,6 +4,15 @@ import * as bcrypt from 'bcrypt';
 import { StorageService } from '../storage/storage.service';
 import { User, UserWithoutPassword } from './entities/user.entity';
 
+const DEFAULT_TOPICS = [
+  'softskills',
+  'frontend',
+  'backend',
+  'fullstack',
+  'devops',
+  'database',
+];
+
 export interface AuthResult {
   user: UserWithoutPassword;
   token: string;
@@ -28,6 +37,8 @@ export class AuthService {
       name,
       passwordHash: await bcrypt.hash(password, 10),
       createdAt: new Date(),
+      improvementTopics: [...DEFAULT_TOPICS],
+      lastInterviewDate: null,
     };
 
     await this.storage.save('users', user.id, user);
@@ -61,6 +72,22 @@ export class AuthService {
   async getUserById(id: string): Promise<UserWithoutPassword | null> {
     const user = await this.storage.get<User>('users', id);
     if (!user) return null;
+    const { passwordHash: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
+
+  async updateUser(id: string, updates: Partial<Pick<User, 'improvementTopics' | 'lastInterviewDate'>>): Promise<UserWithoutPassword | null> {
+    const user = await this.storage.get<User>('users', id);
+    if (!user) return null;
+
+    if (updates.improvementTopics !== undefined) {
+      user.improvementTopics = updates.improvementTopics;
+    }
+    if (updates.lastInterviewDate !== undefined) {
+      user.lastInterviewDate = updates.lastInterviewDate;
+    }
+
+    await this.storage.save('users', user.id, user);
     const { passwordHash: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
   }
