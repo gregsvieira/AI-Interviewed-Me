@@ -76,7 +76,7 @@ export class AuthService {
     return userWithoutPassword;
   }
 
-  async updateUser(id: string, updates: Partial<Pick<User, 'improvementTopics' | 'lastInterviewDate'>>): Promise<UserWithoutPassword | null> {
+  async updateUser(id: string, updates: Partial<Pick<User, 'improvementTopics' | 'lastInterviewDate' | 'avatar'>>): Promise<UserWithoutPassword | null> {
     const user = await this.storage.get<User>('users', id);
     if (!user) return null;
 
@@ -85,6 +85,9 @@ export class AuthService {
     }
     if (updates.lastInterviewDate !== undefined) {
       user.lastInterviewDate = updates.lastInterviewDate;
+    }
+    if (updates.avatar !== undefined) {
+      user.avatar = updates.avatar;
     }
 
     await this.storage.save('users', user.id, user);

@@ -10,6 +10,7 @@ interface SpeakingCircleProps {
   onMicRelease?: () => void
   isUserCircle?: boolean
   isRecording?: boolean
+  avatar?: string
 }
 
 export function SpeakingCircle({
@@ -21,6 +22,7 @@ export function SpeakingCircle({
   onMicRelease,
   isUserCircle = false,
   isRecording = false,
+  avatar,
 }: SpeakingCircleProps) {
   const sizeClasses = {
     sm: 'w-12 h-12 text-sm',
@@ -32,7 +34,7 @@ export function SpeakingCircle({
     <div className={cn('flex flex-col items-center gap-4', isUserCircle && 'relative')}>
       <div
         className={cn(
-          'rounded-full bg-gradient-to-br flex items-center justify-center transition-all duration-300 border-2',
+          'rounded-full flex items-center justify-center transition-all duration-300 border-2 overflow-hidden',
           sizeClasses[size],
           isRecording
             ? 'bg-gradient-to-br from-red-700 to-red-800 border-red-500 shadow-lg shadow-red-500/50'
@@ -41,7 +43,11 @@ export function SpeakingCircle({
         )}
         style={isSpeaking || isRecording ? { animation: 'gentleBounce 0.6s ease-in-out infinite' } : undefined}
       >
-        <span className={cn('font-medium', isRecording ? 'text-red-100' : 'text-zinc-300')}>{label}</span>
+        {avatar && isUserCircle ? (
+          <img src={avatar} alt={label} className="w-full h-full object-cover" />
+        ) : (
+          <span className={cn('font-medium', isRecording ? 'text-red-100' : 'text-zinc-300')}>{label}</span>
+        )}
       </div>
 
       {showMicButton && isUserCircle && (

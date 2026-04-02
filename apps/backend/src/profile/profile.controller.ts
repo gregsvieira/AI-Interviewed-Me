@@ -15,8 +15,8 @@ export class ProfileController {
   @Patch()
   async updateProfile(
     @Request() req,
-    @Body() body: { improvementTopics?: string[] },
+    @Body() body: { improvementTopics?: string[]; avatar?: string },
   ) {
-    return this.profileService.updateProfile(req.user.id, body.improvementTopics);
+    return this.profileService.updateProfile(req.user.id, body.improvementTopics, body.avatar);
   }
 }

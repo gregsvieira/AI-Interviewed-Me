@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useHeaderStore } from '@/stores/header.store'
 import { profileApi } from '@/services/api/profile.api'
 import { UserProfile } from '@/types/user'
 import { Topic } from '@/types/interview'
-import { Check, ArrowLeft, Save } from 'lucide-react'
+import { Check, ArrowLeft, Save, Camera, User } from 'lucide-react'
 
 const TOPICS_DATA: Topic[] = [
   { id: 'softskills', name: 'Soft Skills', subtopics: [] },
@@ -19,8 +19,11 @@ const TOPICS_DATA: Topic[] = [
 export function ProfilePage() {
   const setTitle = useHeaderStore((state) => state.setTitle)
   const navigate = useNavigate()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
+  const [avatar, setAvatar] = useState<string | undefined>(undefined)
+  const [previewAvatar, setPreviewAvatar] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
@@ -34,13 +37,33 @@ export function ProfilePage() {
       .getProfile()
       .then((data) => {
         setProfile(data)
-        setSelectedTopics(data.improvementTopics)
+        setSelectedTopics(data.improvementTopics || [])
+        setAvatar(data.avatar)
+        setPreviewAvatar(data.avatar || null)
       })
       .catch(() => {
         navigate('/')
       })
       .finally(() => setIsLoading(false))
   }, [navigate])
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64 = reader.result as string
+      setPreviewAvatar(base64)
+      setAvatar(base64)
+      setHasChanges(true)
+    }
+    reader.readAsDataURL(file)
+  }
 
   const toggleTopic = (topicId: string) => {
     setSelectedTopics((prev) => {
@@ -57,7 +80,10 @@ export function ProfilePage() {
 
     setIsSaving(true)
     try {
-      await profileApi.updateProfile({ improvementTopics: selectedTopics })
+      await profileApi.updateProfile({
+        improvementTopics: selectedTopics,
+        avatar: avatar,
+      })
       setHasChanges(false)
     } catch (error) {
       console.error('Failed to save profile:', error)
@@ -91,16 +117,41 @@ export function ProfilePage() {
         </div>
 
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-lg font-medium text-zinc-100">Profile</h2>
-              <p className="text-sm text-zinc-400 mt-1">{profile?.email}</p>
-            </div>
-          </div>
+          <h2 className="text-lg font-medium text-zinc-100 mb-6">Profile</h2>
 
-          <div className="border-t border-zinc-800 pt-6">
-            <h3 className="text-md font-medium text-zinc-100 mb-2">Name</h3>
-            <p className="text-zinc-300">{profile?.name}</p>
+          <div className="flex items-center gap-6 mb-6">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-800 border-2 border-zinc-700">
+                {previewAvatar ? (
+                  <img
+                    src={previewAvatar}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <User className="w-10 h-10 text-zinc-600" />
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-0 right-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
+              >
+                <Camera className="w-4 h-4 text-white" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
+            </div>
+            <div>
+              <h3 className="text-xl font-medium text-zinc-100">{profile?.name}</h3>
+              <p className="text-sm text-zinc-400">{profile?.email}</p>
+            </div>
           </div>
         </div>
 

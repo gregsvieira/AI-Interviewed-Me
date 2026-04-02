@@ -12,6 +12,7 @@ import { io, Socket } from 'socket.io-client'
 import { ConversationLog } from './ConversationLog'
 import { LiveTranscript } from './LiveTranscript'
 import { SpeakingCircle } from './SpeakingCircle'
+import { profileApi } from '@/services/api/profile.api'
 
 export function InterviewRoom() {
   const navigate = useNavigate()
@@ -32,11 +33,20 @@ export function InterviewRoom() {
   const [isRecording, setIsRecording] = useState(false)
   const [sttError, setSttError] = useState<string | null>(null)
   const [manualText, setManualText] = useState('')
+  const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const preloadedUsedRef = useRef(false)
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const accumulatedTextRef = useRef('')
   const socketRef = useRef<Socket | null>(null)
+
+  useEffect(() => {
+    profileApi.getProfile().then((profile) => {
+      setUserAvatar(profile.avatar)
+    }).catch(() => {
+      // Profile not found, use default
+    })
+  }, [])
 
   useEffect(() => {
     if (!token) {
@@ -376,6 +386,7 @@ export function InterviewRoom() {
             showMicButton
             onMicPress={handleMicPress}
             onMicRelease={handleMicRelease}
+            avatar={userAvatar}
           />
         </div>
 

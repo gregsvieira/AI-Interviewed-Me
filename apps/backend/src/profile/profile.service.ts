@@ -14,8 +14,8 @@ export class ProfileService {
     return user;
   }
 
-  async updateProfile(userId: string, improvementTopics?: string[]): Promise<UserWithoutPassword> {
-    const user = await this.authService.updateUser(userId, { improvementTopics });
+  async updateProfile(userId: string, improvementTopics?: string[], avatar?: string): Promise<UserWithoutPassword> {
+    const user = await this.authService.updateUser(userId, { improvementTopics, avatar });
     if (!user) {
       throw new NotFoundException('User not found');
     }
