@@ -16,7 +16,7 @@ import { profileApi } from '@/services/api/profile.api'
 
 export function InterviewRoom() {
   const navigate = useNavigate()
-  const { selectedTopic, selectedSubtopic, selectedLevel, isAiSpeaking, isUserSpeaking, conversationLog, timeRemaining, addMessage, setAiSpeaking, setUserSpeaking, decrementTime, startInterview, endInterview, preloadedMessage, setPreloadedMessage, interviewerGender } = useInterviewStore()
+  const { selectedTopic, selectedSubtopic, selectedLevel, isAiSpeaking, isUserSpeaking, conversationLog, timeRemaining, addMessage, updateMessage, setAiSpeaking, setUserSpeaking, decrementTime, startInterview, endInterview, preloadedMessage, setPreloadedMessage, interviewerGender } = useInterviewStore()
   const { token, user } = useAuthStore()
 
   const [socket, setSocket] = useState<Socket | null>(null)
@@ -42,6 +42,7 @@ export function InterviewRoom() {
   const interviewIdRef = useRef<string | null>(null)
   const webSpeechFinalTextRef = useRef('')
   const webSpeechSentRef = useRef(false)
+  const currentUserMessageIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     profileApi.getProfile().then((profile) => {
@@ -103,14 +104,16 @@ export function InterviewRoom() {
     })
 
     newSocket.on('stt:result', (data: { text: string }) => {
-      const text = data.text?.trim()
-      if (text && !webSpeechSentRef.current) {
-        accumulatedTextRef.current = text
-        setUserSpeakingText(text)
-        addMessage({ role: 'user', text })
-        const currentInterviewId = interviewIdRef.current
-        console.log('[InterviewRoom] stt:result, sending user:text with interviewId:', currentInterviewId)
-        newSocket.emit('user:text', { interviewId: currentInterviewId, text })
+      console.log('[InterviewRoom] stt:result received (ignoring - using whisper:result instead):', data.text?.substring(0, 30))
+    })
+
+    newSocket.on('whisper:result', (data: { id: string; text: string; correcting?: boolean }) => {
+      console.log('[InterviewRoom] whisper:result received:', { id: data.id, text: data.text?.substring(0, 30), correcting: data.correcting })
+      if (data.text) {
+        updateMessage(data.id, data.text)
+      }
+      if (data.correcting && currentUserMessageIdRef.current === data.id) {
+        setUserSpeakingText(data.text)
       }
     })
 
@@ -231,6 +234,7 @@ export function InterviewRoom() {
     accumulatedTextRef.current = ''
     webSpeechFinalTextRef.current = ''
     webSpeechSentRef.current = false
+    currentUserMessageIdRef.current = crypto.randomUUID()
     setUserSpeakingText('')
     setUserLiveText('')
     setIsRecording(true)
@@ -252,8 +256,9 @@ export function InterviewRoom() {
           const finalText = webSpeechFinalTextRef.current.trim()
           if (finalText && socketRef.current?.connected && !webSpeechSentRef.current) {
             console.log('[InterviewRoom] WebSpeech final text:', finalText)
-            addMessage({ role: 'user', text: finalText })
-            socketRef.current?.emit('user:text', { interviewId: interviewIdRef.current, text: finalText })
+            const messageId = currentUserMessageIdRef.current!
+            addMessage({ id: messageId, role: 'user', text: finalText })
+            socketRef.current?.emit('user:text', { interviewId: interviewIdRef.current, id: messageId, text: finalText })
             webSpeechSentRef.current = true
           }
           webSpeechFinalTextRef.current = ''
@@ -352,12 +357,11 @@ export function InterviewRoom() {
     setLiveTranscriptActive(false)
     setIsRecording(false)
 
-    if (!webSpeechSentRef.current) {
-      console.log('[InterviewRoom] Requesting server transcription (web speech not used)')
-      socketRef.current?.emit('audio:transcribe', { interviewId: interviewIdRef.current })
-    } else {
-      console.log('[InterviewRoom] Skipping server transcription (web speech already sent)')
-    }
+    console.log('[InterviewRoom] Sending audio:transcribe with messageId:', currentUserMessageIdRef.current)
+    socketRef.current?.emit('audio:transcribe', { 
+      interviewId: interviewIdRef.current,
+      id: currentUserMessageIdRef.current
+    })
     webSpeechSentRef.current = false
   }
 

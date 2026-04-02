@@ -25,7 +25,8 @@ interface InterviewState {
   setConfig: (topic: Topic | null, subtopic: Subtopic | null, duration: number, level: LevelOption) => void
   startInterview: () => void
   endInterview: () => void
-  addMessage: (message: Message) => void
+  addMessage: (message: Omit<Message, 'id'> & { id?: string }) => string
+  updateMessage: (id: string, text: string) => void
   setAiSpeaking: (speaking: boolean) => void
   setUserSpeaking: (speaking: boolean) => void
   decrementTime: () => void
@@ -66,8 +67,18 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
   },
 
   addMessage: (message) => {
+    const id = message.id || crypto.randomUUID()
     set((state) => ({
-      conversationLog: [...state.conversationLog, { ...message, timestamp: new Date() }],
+      conversationLog: [...state.conversationLog, { ...message, id, timestamp: new Date() }],
+    }))
+    return id
+  },
+
+  updateMessage: (id, text) => {
+    set((state) => ({
+      conversationLog: state.conversationLog.map((msg) =>
+        msg.id === id ? { ...msg, text } : msg
+      ),
     }))
   },
 

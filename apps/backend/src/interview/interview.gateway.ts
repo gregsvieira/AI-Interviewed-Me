@@ -213,7 +213,7 @@ export class InterviewGateway implements OnGatewayConnection, OnGatewayDisconnec
   @SubscribeMessage('audio:transcribe')
   async handleAudioTranscribe(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { interviewId: string },
+    @MessageBody() data: { interviewId: string; id: string },
   ) {
     const interviewData = this.activeInterviews.get(data.interviewId);
     if (!interviewData) {
@@ -225,18 +225,23 @@ export class InterviewGateway implements OnGatewayConnection, OnGatewayDisconnec
     }
 
     const interviewId = data.interviewId;
+    const messageId = data.id;
     
     if (interviewData.audioChunks.length === 0) {
+      console.log('[InterviewGateway] audio:transcribe - no chunks, emitting whisper:result with empty text');
+      client.emit('whisper:result', { id: messageId, text: '', correcting: true });
       return { text: '' };
     }
 
     try {
+      console.log('[InterviewGateway] Transcribing audio with Whisper...');
       const combinedAudio = Buffer.concat(interviewData.audioChunks);
       const text = await this.interviewService.transcribeAudio(combinedAudio);
       
       interviewData.audioChunks = [];
       
-      client.emit('stt:result', { text });
+      console.log('[InterviewGateway] Whisper result:', text?.substring(0, 50));
+      client.emit('whisper:result', { id: messageId, text, correcting: true });
 
       return { text };
     } catch (error) {
