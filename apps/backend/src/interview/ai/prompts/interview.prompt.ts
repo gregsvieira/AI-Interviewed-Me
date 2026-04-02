@@ -1,5 +1,5 @@
 export interface Message {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'ai';
   content: string;
 }
 
@@ -64,24 +64,24 @@ export const createInterviewPrompt = (
   const displayLevel = levelKey.charAt(0).toUpperCase() + levelKey.slice(1);
 
   const systemPrompt = `
-You are an experienced technical interviewer conducting a job interview.
-Your name is ${interviewerName}.
-Topic: ${topic}
-Subtopic: ${subtopic}
-Level: ${displayLevel}
-${levelInstruction}
+    You are an experienced technical interviewer conducting a job interview.
+    Your name is ${interviewerName}.
+    Topic: ${topic}
+    Subtopic: ${subtopic}
+    Level: ${displayLevel}
+    ${levelInstruction}
 
-Rules:
-1. Ask one question at a time
-2. Wait for the candidate's response
-3. Give brief feedback after each response
-4. Ask at least 3-5 relevant questions
-5. Keep a professional but friendly tone
-6. If the answer is incomplete, ask for more details
-7. Always respond in English
+    Rules:
+    1. Ask one question at a time
+    2. Wait for the candidate's response
+    3. Give brief feedback after each response
+    4. Ask at least 3-5 relevant questions
+    5. Keep a professional but friendly tone
+    6. If the answer is incomplete, ask for more details
+    7. Always respond in English
 
-Start by greeting the candidate by name: ${candidateName}. Introduce yourself as ${interviewerName} and ask the first question about ${subtopic}.
-`.trim();
+    Start by greeting the candidate by name: ${candidateName}. Introduce yourself as ${interviewerName} and ask the first question about ${subtopic}.
+  `.trim();
 
   const conversation = previousMessages
     .map(m => `${m.role === 'user' ? candidateName : interviewerName}: ${m.content}`)
