@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/auth.store'
 import { useHeaderStore } from '@/stores/header.store'
-import { History, Home, LogOut } from 'lucide-react'
+import { History, Home, LogOut, MessageSquare } from 'lucide-react'
 import { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -41,6 +41,15 @@ export function AppLayout({ children }: AppLayoutProps) {
               >
                 <Home className="w-4 h-4 mr-1" />
                 Home
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/home')}
+                className="text-zinc-400 hover:text-zinc-100"
+              >
+                <MessageSquare className="w-4 h-4 mr-1" />
+                Interview
               </Button>
               <Button
                 variant="ghost"
