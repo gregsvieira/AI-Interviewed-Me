@@ -7,15 +7,14 @@ import { Calendar, Clock, MessageSquare, Play } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-export function HistoryPage() {
+export function HomePage() {
   const setTitle = useHeaderStore((state) => state.setTitle)
-
   const [interviews, setInterviews] = useState<Interview[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => {
-    setTitle("History")
+    setTitle("Home")
   }, [setTitle])
 
   useEffect(() => {
@@ -43,7 +42,7 @@ export function HistoryPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <p className="text-zinc-400">Carregando...</p>
+        <p className="text-zinc-400">Loading...</p>
       </div>
     )
   }
@@ -52,7 +51,7 @@ export function HistoryPage() {
     <div className="min-h-screen bg-zinc-950">
       <header className="border-b border-zinc-800 bg-zinc-900">
         <div className="container mx-auto px-4 py-4">
-          <h1 className="text-xl font-bold text-zinc-100">Interview History</h1>
+          <h1 className="text-xl font-bold text-zinc-100">Home</h1>
         </div>
       </header>
 

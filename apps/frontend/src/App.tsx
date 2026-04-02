@@ -1,10 +1,10 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuthStore } from '@/stores/auth.store'
-import { LoginPage } from '@/pages/LoginPage'
-import { ConfigPage } from '@/pages/ConfigPage'
-import { InterviewPage } from '@/pages/InterviewPage'
-import { HistoryPage } from '@/pages/HistoryPage'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { ConfigPage } from '@/pages/ConfigPage'
+import { HistoryPage } from '@/pages/HistoryPage'
+import { InterviewPage } from '@/pages/InterviewPage'
+import { LoginPage } from '@/pages/LoginPage'
+import { useAuthStore } from '@/stores/auth.store'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -35,6 +35,14 @@ export default function App() {
           element={
             <PublicRoute>
               <LoginPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/home"
+          element={
+            <PublicRoute>
+              <ConfigPage />
             </PublicRoute>
           }
         />

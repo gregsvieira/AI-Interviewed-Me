@@ -1,8 +1,9 @@
+import { Button } from '@/components/ui/button'
+import { useAuthStore } from '@/stores/auth.store'
+import { useHeaderStore } from '@/stores/header.store'
+import { History, Home, LogOut } from 'lucide-react'
 import { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { LogOut, History } from 'lucide-react'
-import { useAuthStore } from '@/stores/auth.store'
-import { Button } from '@/components/ui/button'
 
 interface AppLayoutProps {
   children: ReactNode
@@ -11,6 +12,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate()
   const { user, logout, isAuthenticated } = useAuthStore()
+  const title = useHeaderStore((state) => state.title)
 
   const handleLogout = () => {
     logout()
@@ -26,7 +28,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <header className="border-b border-zinc-800 bg-zinc-900">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/config" className="text-xl font-bold text-zinc-100">
-            Interviewed
+            {title}
           </Link>
           <div className="flex items-center gap-4">
             <span className="text-sm text-zinc-400">{user?.name}</span>
@@ -34,11 +36,20 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => navigate('/home')}
+                className="text-zinc-400 hover:text-zinc-100"
+              >
+                <Home className="w-4 h-4 mr-1" />
+                Home
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => navigate('/history')}
                 className="text-zinc-400 hover:text-zinc-100"
               >
                 <History className="w-4 h-4 mr-1" />
-                Histórico
+                History
               </Button>
               <Button
                 variant="ghost"
@@ -47,13 +58,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                 className="text-zinc-400 hover:text-zinc-100"
               >
                 <LogOut className="w-4 h-4 mr-1" />
-                Sair
+                Logout
               </Button>
             </nav>
           </div>
         </div>
       </header>
-      <main>{children}</main>
+      <main>
+      {children}
+      </main>
     </div>
   )
 }
