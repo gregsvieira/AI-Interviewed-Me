@@ -18,6 +18,6 @@ import { AuthModule } from '../auth/auth.module';
   ],
   controllers: [InterviewController],
   providers: [InterviewService, InterviewGateway, AIService, OllamaService],
-  exports: [InterviewService],
+  exports: [InterviewService, OllamaService],
 })
 export class InterviewModule {}
