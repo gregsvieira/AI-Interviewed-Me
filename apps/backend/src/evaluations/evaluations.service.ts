@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { db } from '../db';
 import { evaluations as evaluationsTable } from '../db/schema';
+import { sql } from 'drizzle-orm';
 import { OllamaService } from '../interview/ai/ollama.service';
 import { createEvaluationPrompt, EvaluationQA } from '../interview/ai/prompts/evaluation.prompt';
 import { QuestionsService } from '../questions/questions.service';
@@ -36,7 +37,6 @@ export class EvaluationsService {
       .select()
       .from(evaluationsTable)
       .where(
-        // @ts-ignore - interviewId is a column in evaluationsTable
         sql`${evaluationsTable.interviewId} = ${interviewId}`
       )
       .limit(1);
@@ -49,8 +49,8 @@ export class EvaluationsService {
         subtopicId: evalData.subtopicId,
         level: evalData.level,
         overallScore: evalData.overallScore,
-        questionEvaluations: evalData.questionEvaluations as QuestionEvaluation[],
-        createdAt: evalData.createdAt,
+        questionEvaluations: (evalData.questionEvaluations ? JSON.parse(evalData.questionEvaluations) : []) as QuestionEvaluation[],
+        createdAt: evalData.createdAt || new Date(),
       };
     }
 
@@ -110,7 +110,7 @@ export class EvaluationsService {
       subtopicId,
       level,
       overallScore,
-      questionEvaluations,
+      questionEvaluations: JSON.stringify(questionEvaluations),
     });
 
     return {
