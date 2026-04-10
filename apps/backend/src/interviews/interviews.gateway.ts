@@ -1,0 +1,265 @@
+import { JwtService } from '@nestjs/jwt';
+import {
+  ConnectedSocket,
+  MessageBody,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
+} from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+import { InterviewsService } from './interviews.service';
+
+interface ActiveInterview {
+  socketId: string;
+  userId: string;
+  audioChunks: any[];
+}
+
+@WebSocketGateway({
+  cors: {
+    origin: '*',
+  },
+})
+export class InterviewsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
+  server: Server;
+
+  private activeInterviews: Map<string, ActiveInterview> = new Map();
+
+  constructor(
+    private interviewService: InterviewsService,
+    private jwtService: JwtService,
+  ) {}
+
+  async handleConnection(client: Socket) {
+    console.log('=== Client connecting:', client.id);
+    console.log('    handshake:', JSON.stringify(client.handshake));
+    try {
+      const token = client.handshake.auth?.token;
+      const queryToken = client.handshake.query?.token;
+      console.log('    token (auth):', token ? 'yes' : 'no');
+      console.log('    token (query):', queryToken ? 'yes' : 'no');
+      
+      const finalToken = token || queryToken;
+      if (!finalToken) {
+        console.log('    No token, allowing connection anyway for testing');
+        client.data.user = { id: 'test-user' };
+        return;
+      }
+
+      const user = await this.interviewService.validateToken(finalToken as string);
+      console.log('    User validated:', user);
+      client.data.user = user;
+      console.log('    Connection accepted!');
+    } catch (error) {
+      console.error('    Connection error:', error);
+      client.emit('error', { message: 'Connection failed' });
+      client.disconnect();
+    }
+  }
+
+  handleDisconnect(client: Socket) {
+    const interviewId = [...this.activeInterviews.entries()]
+      .find(([, interview]) => interview.socketId === client.id)?.[0];
+
+    if (interviewId) {
+      this.activeInterviews.delete(interviewId);
+    }
+  }
+
+  @SubscribeMessage('start')
+  async handleStart(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { topic: string; subtopic: string; level: string; duration?: number; candidateName?: string },
+  ) {
+    console.log('[InterviewGateway] === Received start event ===');
+    console.log('[InterviewGateway] Socket ID:', client.id);
+    console.log('[InterviewGateway] User ID:', client.data.user?.id);
+    console.log('[InterviewGateway] Data:', JSON.stringify(data));
+    if (!client.data.user) {
+      console.log('Unauthorized - no user data');
+      return { error: 'Unauthorized' };
+    }
+
+    const interviewId = crypto.randomUUID();
+
+    this.activeInterviews.set(interviewId, {
+      socketId: client.id,
+      userId: client.data.user.id,
+      audioChunks: [],
+    });
+
+    try {
+      console.log('[InterviewGateway] Starting interview:', { interviewId, data });
+      const startTime = Date.now();
+      
+      const { firstMessage, candidateName, interviewer } = await this.interviewService.startInterview(
+        interviewId,
+        client.data.user.id,
+        data.topic,
+        data.subtopic,
+        data.level,
+        data.duration || 30,
+        data.candidateName,
+      );
+
+      console.log('[InterviewGateway] AI response received:', { 
+        interviewId, 
+        responseLength: firstMessage.length,
+        duration: `${Date.now() - startTime}ms` 
+      });
+
+      client.emit('interview:started', { interviewId, candidateName, interviewerName: interviewer.name, interviewerGender: interviewer.gender, interviewerAvatar: interviewer.avatar });
+      client.emit('ai:text', { text: firstMessage, candidateName, interviewerName: interviewer.name, interviewerGender: interviewer.gender, interviewerAvatar: interviewer.avatar });
+      client.emit('ai:speaking', true);
+
+      return { interviewId, candidateName, interviewerName: interviewer.name, interviewerGender: interviewer.gender, interviewerAvatar: interviewer.avatar };
+    } catch (error) {
+      console.error('Error starting interview:', error);
+      this.activeInterviews.delete(interviewId);
+      return { error: 'Failed to start interview' };
+    }
+  }
+
+  @SubscribeMessage('user:text')
+  async handleUserText(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { interviewId: string; id?: string; text: string },
+  ) {
+    console.log('[InterviewGateway] *** Received user:text event ***');
+    console.log('[InterviewGateway] Socket ID:', client.id);
+    console.log('[InterviewGateway] Received user:text:', { interviewId: data.interviewId, text: data.text?.substring(0, 50) });
+    
+    const activeInterview = this.activeInterviews.get(data.interviewId);
+    
+    console.log('[InterviewGateway] Active interviews:', Array.from(this.activeInterviews.keys()));
+    console.log('[InterviewGateway] Looking for interviewId:', data.interviewId);
+    
+    if (!activeInterview) {
+      console.log('[InterviewGateway] user:text rejected: Interview not found');
+      return { error: 'No active interview' };
+    }
+
+    client.emit('user:speaking', false);
+    client.emit('ai:speaking', true);
+
+    try {
+      console.log('[InterviewGateway] Calling processUserMessage...');
+      const response = await this.interviewService.processUserMessage(
+        data.interviewId,
+        data.text,
+      );
+
+      client.emit('ai:text', { text: response });
+      client.emit('ai:speaking', false);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error processing message:', error);
+      client.emit('ai:speaking', false);
+      return { error: 'Failed to process message' };
+    }
+  }
+
+  @SubscribeMessage('end')
+  async handleEnd(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { interviewId: string },
+  ) {
+    const interview = [...this.activeInterviews.entries()].find(([, i]) => i.socketId === client.id);
+    if (interview) {
+      const [interviewId] = interview;
+      const interviewData = this.activeInterviews.get(interviewId);
+      try {
+        await this.interviewService.endInterview(interviewId);
+        this.activeInterviews.delete(interviewId);
+        client.emit('interview:ended');
+        return { success: true };
+      } catch (error) {
+        console.error('Error ending interview:', error);
+        return { error: 'Failed to end interview' };
+      }
+    }
+    return { error: 'Interview not found or unauthorized' };
+  }
+
+  @SubscribeMessage('audio:chunk')
+  async handleAudioChunk(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { interviewId: string; audio: any },
+  ) {
+    const interviewData = this.activeInterviews.get(data.interviewId);
+    if (!interviewData) {
+      return { error: 'No active interview' };
+    }
+
+    if (interviewData.socketId !== client.id) {
+      return { error: 'Socket mismatch' };
+    }
+    
+    let audioBuffer: Buffer;
+    
+    if (data.audio instanceof ArrayBuffer) {
+      audioBuffer = Buffer.from(data.audio);
+    } else if (data.audio instanceof Buffer) {
+      audioBuffer = data.audio;
+    } else if (typeof data.audio === 'object' && data.audio.data) {
+      audioBuffer = Buffer.from(data.audio.data);
+    } else if (typeof data.audio === 'string') {
+      audioBuffer = Buffer.from(data.audio, 'base64');
+    } else {
+      return { error: 'Unknown audio format' };
+    }
+
+    interviewData.audioChunks.push(audioBuffer);
+
+    return { received: true, chunks: interviewData.audioChunks.length };
+  }
+
+  @SubscribeMessage('audio:transcribe')
+  async handleAudioTranscribe(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { interviewId: string; id: string },
+  ) {
+    const interviewData = this.activeInterviews.get(data.interviewId);
+    if (!interviewData) {
+      return { error: 'No active interview' };
+    }
+
+    if (interviewData.socketId !== client.id) {
+      return { error: 'Socket mismatch' };
+    }
+
+    const interviewId = data.interviewId;
+    const messageId = data.id;
+    
+    if (interviewData.audioChunks.length === 0) {
+      console.log('[InterviewGateway] audio:transcribe - no chunks, emitting whisper:result with empty text');
+      client.emit('whisper:result', { id: messageId, text: '', correcting: true });
+      return { text: '' };
+    }
+
+    try {
+      console.log('[InterviewGateway] Transcribing audio with Whisper...');
+      const combinedAudio = Buffer.concat(interviewData.audioChunks);
+      const text = await this.interviewService.transcribeAudio(combinedAudio);
+      
+      interviewData.audioChunks = [];
+      
+      console.log('[InterviewGateway] Whisper result:', text?.substring(0, 50));
+      client.emit('whisper:result', { id: messageId, text, correcting: true });
+
+      return { text };
+    } catch (error) {
+      console.error('Transcription error:', error);
+      return { error: 'Transcription failed' };
+    }
+  }
+
+  @SubscribeMessage('ping')
+  handlePing() {
+    return { timestamp: Date.now() };
+  }
+}
