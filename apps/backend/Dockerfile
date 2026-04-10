@@ -1,44 +1,26 @@
 # ============================================
-# BACKEND - NestJS
+# BACKEND - NestJS (CPU Only - Sem GPU)
 # ============================================
 FROM node:20-alpine AS backend-builder
-
 WORKDIR /app
-
-# Copiar package files
 COPY apps/backend/package*.json ./
-
-# Instalar dependências
 RUN npm ci
-
-# Copiar código fonte
 COPY apps/backend/ ./
-
-# Build
 RUN npm run build
 
-# Production stage
 FROM node:20-alpine
-
 WORKDIR /app
-
-# Criar diretório para storage
-RUN mkdir -p /home/node/.interviewed
-
-# Copiar package files e instalar production deps
+RUN apk add --no-cache postgresql-client
+RUN mkdir -p /home/node/.interviewed && chown -R node:node /home/node
 COPY apps/backend/package*.json ./
 RUN npm ci --only=production && npm cache clean --force
-
-# Copiar build
 COPY --from=backend-builder /app/dist ./dist
-
-# Trocar para usuário não-root
+RUN chown -R node:node /app
 USER node
-
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOME=/home/node
-
 EXPOSE 3000
+COPY apps/backend/entrypoint.sh /entrypoint.sh
 
-CMD ["node", "dist/main"]
+ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
